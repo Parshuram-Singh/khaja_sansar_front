@@ -1,0 +1,80 @@
+
+.hero-container {
+  background: linear-gradient(to right, #ff8c00, #ff5700); /* Vibrant gradient background */
+  color: #ffffff; /* White text for contrast */
+  text-align: center;
+  padding: 50px 20px;
+  border-radius: 10px;
+}
+
+.hero-content {
+  max-width: 800px;
+  margin: 0 auto;
+}
+
+.hero-title {
+  font-size: 2.5rem;
+  font-weight: bold;
+  margin-bottom: 20px;
+  text-shadow: 2px 2px 5px rgba(0, 0, 0, 0.3); /* Subtle shadow for depth */
+}
+
+.hero-subtitle {
+  font-size: 1.25rem;
+  margin-bottom: 20px;
+  line-height: 1.6;
+}
+
+.hero-list {
+  list-style-type: none;
+  padding: 0;
+  margin: 20px 0;
+}
+
+.hero-list li {
+  font-size: 1rem;
+  margin: 10px 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.hero-list li::before {
+  content: "✓"; /* Checkmark symbol */
+  color: #ffdd00; /* Golden color for the checkmark */
+  margin-right: 10px;
+  font-size: 1.2rem;
+}
+
+.hero-button {
+  background-color: #ffffff; /* White button for contrast */
+  color: #ff5700; /* Matches gradient */
+  border: none;
+  padding: 15px 30px;
+  font-size: 1rem;
+  font-weight: bold;
+  border-radius: 5px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.hero-button:hover {
+  background-color: #ffdd00; /* Golden hover effect */
+  color: #ffffff;
+  transform: scale(1.05); /* Slight zoom on hover */
+}
+
+@media (max-width: 768px) {
+  .hero-title {
+    font-size: 2rem;
+  }
+
+  .hero-subtitle {
+    font-size: 1rem;
+  }
+
+  .hero-button {
+    padding: 10px 20px;
+    font-size: 0.9rem;
+  }
+}

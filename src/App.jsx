@@ -1,0 +1,27 @@
+import React from 'react'
+import { BrowserRouter, Routes, Route } from "react-router"
+import Layout from './Layout'
+import HomePage from './pages/home/HomePage'
+import ContactPage from './pages/contact/ContactPage'
+import SubscriptionPage from './pages/subscription/SubscriptionPage'
+import LoginPage from './pages/login/LoginPage'
+import RegisterPage from './pages/register/RegisterPage'
+const App = () => {
+  return (
+    <>
+      <BrowserRouter>
+        <Routes>
+          <Route path="" element={<Layout />}>
+            <Route index element={<HomePage />} />
+            <Route path='/contact' element={<ContactPage />} />
+            <Route path='/subscription' element={<SubscriptionPage />} />
+            <Route path='/login' element={<LoginPage/>}/>
+            <Route path='/register' element={<RegisterPage/>}/>
+          </Route>
+        </Routes>
+      </BrowserRouter>
+    </>
+  )
+}
+
+export default App
