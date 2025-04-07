@@ -9,6 +9,7 @@ import RegisterPage from './pages/RegisterPage'
 import DashboardPage from "./pages/dashboard/DashboardPage"
 import ProfilePage from "./pages/ProfilePage"
 import NoPage from './pages/NoPage'
+import PaymentSuccess from './components/paymentGateway/PaymentSuccess'
 const App = () => {
   return (
     <>
@@ -24,6 +25,8 @@ const App = () => {
             <Route path='/dashboard' element={<DashboardPage/>}/>
             <Route path='/profile' element={<ProfilePage/>}/>
             <Route path="*" element={<NoPage />} />
+            <Route path='/payment-success' element={<PaymentSuccess />} />
+
 
           </Route>
         </Routes>
