@@ -1,6 +1,7 @@
-import React from 'react';
 import './Hero.css'; // Import the CSS file for styling
 import { FaArrowRight } from "react-icons/fa";
+import { Link } from 'react-router-dom';
+
 
 const Hero = () => {
   return (
@@ -20,6 +21,7 @@ const Hero = () => {
             </p>
 
             <div className="space-x-4 space-y-2 mt-6">
+            
               <a
                 href="#menu"
                 className="bg-yellow-500 hover:bg-yellow-400 text-white py-3 px-8 rounded-full text-lg font-semibold transition-all duration-300 inline-block"
@@ -27,10 +29,10 @@ const Hero = () => {
                 Learn More
               </a>
               <a
-                href="#subscription"
+                href="/menus"
                 className="bg-yellow-500 hover:bg-yellow-400 text-white py-3 px-8 rounded-full text-lg font-semibold transition-all duration-300 inline-flex items-center space-x-2"
               >
-                <span>Start Subscription</span>
+                <span>Go to menus</span>
                 <FaArrowRight />
               </a>
             </div>

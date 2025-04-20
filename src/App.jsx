@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route } from "react-router"
+import { BrowserRouter, Routes, Route, Navigate } from "react-router"
 import Layout from './Layout'
 import HomePage from './pages/home/HomePage'
 import ContactPage from './pages/contact/ContactPage'
@@ -10,7 +10,12 @@ import DashboardPage from "./pages/dashboard/DashboardPage"
 import ProfilePage from "./pages/ProfilePage"
 import NoPage from './pages/NoPage'
 import PaymentSuccess from './components/paymentGateway/PaymentSuccess'
+import OrderHistory from "./components/myProfile/OrderHistory"
+
 const App = () => {
+
+
+
   return (
     <>
       <BrowserRouter>
@@ -22,12 +27,11 @@ const App = () => {
             <Route path='/subscriptions' element={<SubscriptionPage />} />
             <Route path='/login' element={<LoginPage/>}/>
             <Route path='/register' element={<RegisterPage/>}/>
-            <Route path='/dashboard' element={<DashboardPage/>}/>
+            <Route path="/dashboard" element={<DashboardPage/>} />
+            <Route path='/orders' element={<OrderHistory/>}/>
             <Route path='/profile' element={<ProfilePage/>}/>
             <Route path="*" element={<NoPage />} />
             <Route path='/payment-success' element={<PaymentSuccess />} />
-
-
           </Route>
         </Routes>
       </BrowserRouter>

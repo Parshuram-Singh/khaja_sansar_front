@@ -2,6 +2,7 @@ import { useState } from 'react';
 import useMenus from '../../hooks/useMenus.js';
 import { FaHamburger, FaDollarSign, FaRegListAlt, FaTrash, FaImage } from 'react-icons/fa';
 import "./stylesheets/MenuManagement.css";
+import useUser from '../../hooks/useUser.js';
 
 function MenuManagement() {
   const [menuData, setMenuData] = useState({
@@ -23,6 +24,8 @@ function MenuManagement() {
     createdMenu,
     fetchError,
   } = useMenus();
+
+  const { user } = useUser();
 
   const handleSave = async (e) => {
     e.preventDefault();
@@ -60,8 +63,12 @@ function MenuManagement() {
     }
   };
 
+  if (!user) {
+    return <h2>Somethings wrong.</h2>
+  }
+
   return (
-    <div className="menu-management">
+    user.role === "admin" ? <div className="menu-management">
       <h2>Menu Management</h2>
       <p>Manage the menus that will be available in the food delivery system.</p>
 
@@ -111,6 +118,8 @@ function MenuManagement() {
                   </div>
                 )}
               </div>
+
+
 
               <div className="form-field description-field">
                 <label htmlFor="description"><FaRegListAlt /> Description</label>
@@ -189,7 +198,7 @@ function MenuManagement() {
           {deleteError && <p className="error-text">{deleteError}</p>}
         </div>
       </div>
-    </div>
+    </div> : <h1>Create the user page</h1>
   );
 }
 

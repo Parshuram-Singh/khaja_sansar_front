@@ -33,14 +33,7 @@ const Sidebar = ({setActive}) => {
           </a>
         ))}
       </nav>
-      <div className="p-6">
-        <a
-          href="#"
-          className="flex items-center justify-center w-full py-2 bg-green-500 text-white rounded hover:bg-green-600 transition-colors"
-        >
-          <FaBook className="mr-2" /> Documentation
-        </a>
-      </div>
+      
     </aside>
   );
 };

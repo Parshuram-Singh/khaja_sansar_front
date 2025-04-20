@@ -25,7 +25,6 @@ const LoginPage = () => {
       const data = await loginUser(formData);
       console.log("Login successful:", data);
       localStorage.setItem("authToken", data.token);
-      // return;
       setMessage("Login successful! Redirecting...");
       localStorage.setItem("user", JSON.stringify(data.user)); // Store user data in local storage
       setTimeout(() => {
@@ -48,7 +47,7 @@ const LoginPage = () => {
         <h2 className="text-3xl font-extrabold text-gray-900 text-center mb-8">
           Sign in to your account
         </h2>
-        
+
         {/* Display success/error message */}
         {message && (
           <div className={`text-center p-3 mb-4 rounded-md ${isError ? "bg-red-100 text-red-700" : "bg-green-100 text-green-700"}`}>
