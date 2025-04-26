@@ -1,212 +1,299 @@
-import React, { useEffect, useState, useCallback } from "react";
-import "./Plan.css";
+import { useEffect, useState } from "react";
 import useMenus from "../../hooks/useMenus";
 import { toast } from "react-toastify";
 
 const WeeklyPlan = ({ setSelectedMenu, selectedMenu, subscribeItems }) => {
   const { menus } = useMenus();
   const [selectedDays, setSelectedDays] = useState([]);
-  const [foodItems, setFoodItems] = useState({});
-  const [newMenus, setNewMenus] = useState([]);
+  const [foodItems, setFoodItems] = useState({}); // { day: [item1, item2, ...] }
+  const [deliveryAddress, setDeliveryAddress] = useState("");
+  const [deliveryTime, setDeliveryTime] = useState("");
+  const [startDate, setStartDate] = useState("");
+  const [endDate, setEndDate] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Load selected products from local storage
+  // Calculate total price based on all selected items across all days
+  const totalPrice = Object.values(foodItems).reduce((sum, items) => {
+    return sum + items.reduce((itemSum, item) => itemSum + (item.price || 0), 0);
+  }, 0);
+
+  // Update selectedMenu state
   useEffect(() => {
-    const data = JSON.parse(localStorage.getItem("selectedProducts"));
-    if (!data || data.length === 0) {
-      toast.warning("Please select the menu items first.");
-      return;
-    }
-    console.log("Loaded menu data:", data);
-    setNewMenus(data.map((item) => ({ ...item, price: Number(item.price) })));
-  }, [menus]);
+    const orderDetails = selectedDays.map((day) => ({
+      day,
+      items: foodItems[day]?.map((item) => item.name) || [],
+    })).filter((detail) => detail.items.length > 0);
 
-  // Handle day selection/deselection
-  const handleDaySelect = (rawDay) => {
-    const day = rawDay.trim(); // Ensure no extra spaces
+    setSelectedMenu({
+      ...selectedMenu,
+      price: totalPrice,
+      time: deliveryTime,
+      deliveryAddress,
+      startDate,
+      endDate,
+      orderDetails,
+      type: "weekly",
+    });
+  }, [foodItems, selectedDays, deliveryTime, deliveryAddress, startDate, endDate, setSelectedMenu, totalPrice]);
+
+  const handleDaySelect = (day) => {
     setSelectedDays((prev) =>
       prev.includes(day) ? prev.filter((d) => d !== day) : [...prev, day]
     );
-  };
-
-  // Handle assigning a food item to a selected day
-  const handleFoodSelection = useCallback(
-    (day, item, itemPrice) => {
-      setFoodItems((prev) => {
-        const previousItem = prev[day];
-        const updated = {
-          ...prev,
-          [day]: item,
-        };
-
-        const previousDetails = previousItem
-          ? newMenus.find((menu) => menu.name === previousItem)
-          : null;
-        const previousPrice = previousDetails
-          ? Number(previousDetails.price)
-          : 0;
-        const newPrice = Number(selectedMenu.price) - previousPrice + itemPrice;
-
-        // Use a useEffect to update the selectedMenu after rendering
-        // Use a flag to update only when necessary to avoid multiple updates
-        setSelectedMenu((prevSelected) => ({
-          ...prevSelected,
-          price: newPrice,
-          orderDetails: updateOrderDetails(updated),
-        }));
-
-        return updated;
-      });
-    },
-    [newMenus, selectedMenu, setSelectedMenu]
-  );
-
-  // Remove selected food item from a day
-  const removeSelectedItems = useCallback(
-    (day, itemToRemove) => {
+    // Clear food items for deselected day
+    if (selectedDays.includes(day)) {
       setFoodItems((prev) => {
         const updated = { ...prev };
         delete updated[day];
-
-        const itemDetails = newMenus.find((menu) => menu.name === itemToRemove);
-        const itemPrice = itemDetails ? Number(itemDetails.price) : 0;
-
-        // Defer the update of selectedMenu to avoid updating during render
-        setSelectedMenu((prevSelected) => {
-          const newPrice = Math.max(0, Number(prevSelected.price) - itemPrice);
-          return {
-            ...prevSelected,
-            price: newPrice,
-            orderDetails: updateOrderDetails(updated),
-          };
-        });
-
         return updated;
       });
-    },
-    [newMenus, setSelectedMenu]
-  );
-
-  // Update orderDetails for summary
-  const updateOrderDetails = (updatedFoodItems) => {
-    return selectedDays.map((day) => ({
-      day,
-      items: updatedFoodItems[day] ? [updatedFoodItems[day]] : [],
-    }));
+    }
   };
 
-  // Handle delivery time input
+  const handleFoodSelection = (day, item) => {
+    setFoodItems((prev) => {
+      const currentItems = prev[day] || [];
+      if (currentItems.some((i) => i.name === item.name)) {
+        // Remove item if already selected
+        return {
+          ...prev,
+          [day]: currentItems.filter((i) => i.name !== item.name),
+        };
+      } else {
+        // Add item
+        return {
+          ...prev,
+          [day]: [...currentItems, item],
+        };
+      }
+    });
+  };
+
   const handleDeliveryTimeChange = (e) => {
-    const time = e.target.value;
-    setSelectedMenu((prev) => ({
-      ...prev,
-      time,
-    }));
+    setDeliveryTime(e.target.value);
   };
+
+  const handleDeliveryAddressChange = (e) => {
+    setDeliveryAddress(e.target.value);
+  };
+
+  const handleStartDateChange = (e) => {
+    const selectedStartDate = e.target.value;
+    setStartDate(selectedStartDate);
+
+    // Automatically set endDate to 7 days later
+    const start = new Date(selectedStartDate);
+    const end = new Date(start);
+    end.setDate(start.getDate() + 7);
+    const formattedEndDate = end.toISOString().split("T")[0];
+    setEndDate(formattedEndDate);
+  };
+
+  const handleSubscribe = () => {
+    if (isSubmitting) return;
+    if (!deliveryAddress) {
+      toast.warning("Please provide a delivery address.");
+      return;
+    }
+    if (!startDate) {
+      toast.warning("Please select a start date.");
+      return;
+    }
+    if (selectedDays.length === 0) {
+      toast.warning("Please select at least one delivery day.");
+      return;
+    }
+    if (Object.keys(foodItems).length === 0) {
+      toast.warning("Please select at least one food item.");
+      return;
+    }
+
+    setIsSubmitting(true);
+    subscribeItems();
+  };
+
+  // Reset isSubmitting after subscription attempt
+  useEffect(() => {
+    if (isSubmitting) {
+      const timer = setTimeout(() => setIsSubmitting(false), 1000);
+      return () => clearTimeout(timer);
+    }
+  }, [isSubmitting]);
 
   return (
-    <div className="weekly-plan">
-      <h2>Weekly Plan</h2>
-      <p>
-        <strong>Price:</strong> ₹{selectedMenu.price}
-      </p>
-      <p>
-        <strong>Meals per Day:</strong> 3
-      </p>
-      <p>
-        <strong>Duration:</strong> 7 days
-      </p>
+    <div className="bg-white rounded-xl shadow-md p-6 mb-8">
+      <h2 className="text-2xl font-bold text-gray-800 mb-4">Weekly Plan</h2>
 
-      <div className="delivery-settings">
-        <div className="delivery-day">
-          <h4>Select Delivery Days</h4>
-          {[
-            "Monday",
-            "Tuesday",
-            "Wednesday",
-            "Thursday",
-            "Friday",
-            "Saturday",
-            "Sunday",
-          ].map((rawDay) => {
-            const day = rawDay.trim();
-            return (
-              <div key={day}>
-                <label>
-                  <input
-                    type="checkbox"
-                    checked={selectedDays.includes(day)}
-                    onChange={() => handleDaySelect(day)}
-                  />
-                  {day}
-                </label>
-
-                {selectedDays.includes(day) && (
-                  <div className="food-items">
-                    <h4>Food Item for {day}</h4>
-                    <select
-                      onChange={(e) => {
-                        const selectedItem = e.target.value;
-                        const itemDetails = newMenus.find(
-                          (menu) => menu.name === selectedItem
-                        );
-                        const itemPrice = itemDetails
-                          ? Number(itemDetails.price)
-                          : 0;
-                        handleFoodSelection(day, selectedItem, itemPrice);
-                      }}
-                      value={foodItems[day] || ""}
-                    >
-                      <option value="" disabled>
-                        Select a food item
-                      </option>
-                      {newMenus.map((menuItem, index) => (
-                        <option key={index} value={menuItem.name}>
-                          {menuItem.name} (₹{menuItem.price})
-                        </option>
-                      ))}
-                    </select>
-
-                    <div>
-                      <strong>Selected item for {day}:</strong>
-                      {foodItems[day] ? (
-                        <ul>
-                          <li
-                            onClick={() =>
-                              removeSelectedItems(day, foodItems[day])
-                            }
-                            style={{ cursor: "pointer" }}
-                          >
-                            {foodItems[day]} (₹
-                            {newMenus.find(
-                              (menu) => menu.name === foodItems[day]
-                            )?.price || 0}
-                            ) - Click to remove
-                          </li>
-                        </ul>
-                      ) : (
-                        <p>No item selected</p>
-                      )}
-                    </div>
-                  </div>
-                )}
-              </div>
-            );
-          })}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+        <div className="bg-gray-50 p-4 rounded-lg">
+          <p className="text-gray-600">Price</p>
+          <p className="text-xl font-semibold text-gray-800">₹{totalPrice}</p>
         </div>
-
-        <div className="delivery-time">
-          <h4>Select Delivery Time</h4>
-          <input
-            type="time"
-            value={selectedMenu.time || ""}
-            onChange={handleDeliveryTimeChange}
-          />
+        <div className="bg-gray-50 p-4 rounded-lg">
+          <p className="text-gray-600">Meals per Day</p>
+          <p className="text-xl font-semibold text-gray-800">3</p>
+        </div>
+        <div className="bg-gray-50 p-4 rounded-lg">
+          <p className="text-gray-600">Duration</p>
+          <p className="text-xl font-semibold text-gray-800">7 days</p>
         </div>
       </div>
 
-      <button className="subscribe-btn" onClick={subscribeItems}>
-        Subscribe
-      </button>
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Left Section: Form */}
+        <div className="lg:col-span-2 space-y-6">
+          <div>
+            <h3 className="text-lg font-semibold text-gray-800 mb-3">Select Delivery Days</h3>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+              {["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"].map((day) => (
+                <div key={day} className="bg-gray-50 rounded-lg p-3">
+                  <label className="flex items-center space-x-2 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      className="h-5 w-5 text-blue-600 rounded focus:ring-blue-500"
+                      checked={selectedDays.includes(day)}
+                      onChange={() => handleDaySelect(day)}
+                    />
+                    <span className="text-gray-700">{day}</span>
+                  </label>
+
+                  {selectedDays.includes(day) && (
+                    <div className="mt-3 space-y-2">
+                      <h4 className="text-sm font-medium text-gray-700">Food Items for {day}</h4>
+                      <div className="space-y-1 max-h-40 overflow-y-auto border border-gray-300 rounded-md p-2">
+                        {menus.map((menu) => (
+                          <label key={menu.name} className="flex items-center space-x-2 cursor-pointer">
+                            <input
+                              type="checkbox"
+                              className="h-5 w-5 text-blue-600 rounded focus:ring-blue-500"
+                              checked={foodItems[day]?.some((item) => item.name === menu.name) || false}
+                              onChange={() => handleFoodSelection(day, menu)}
+                            />
+                            <span className="text-gray-700">{menu.name} (₹{menu.price})</span>
+                          </label>
+                        ))}
+                        {menus.length === 0 && (
+                          <p className="text-gray-500">No menu items available</p>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div className="bg-gray-50 p-4 rounded-lg">
+            <h3 className="text-lg font-semibold text-gray-800 mb-3">Delivery Details</h3>
+            <div className="space-y-4">
+              <div>
+                <label className="text-gray-600">Delivery Address</label>
+                <input
+                  type="text"
+                  className="w-full p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                  value={deliveryAddress}
+                  onChange={handleDeliveryAddressChange}
+                  placeholder="Enter delivery address"
+                />
+              </div>
+              <div>
+                <label className="text-gray-600">Delivery Time</label>
+                <input
+                  type="time"
+                  className="w-full p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                  value={deliveryTime}
+                  onChange={handleDeliveryTimeChange}
+                />
+              </div>
+              <div>
+                <label className="text-gray-600">Start Date</label>
+                <input
+                  type="date"
+                  className="w-full p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                  value={startDate}
+                  onChange={handleStartDateChange}
+                  min={new Date().toISOString().split("T")[0]}
+                />
+              </div>
+              <div>
+                <label className="text-gray-600">End Date</label>
+                <input
+                  type="date"
+                  className="w-full p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                  value={endDate}
+                  disabled
+                />
+              </div>
+            </div>
+          </div>
+
+          <button
+            className={`w-full py-3 px-4 rounded-md font-medium text-white transition-colors ${
+              selectedDays.length === 0 || Object.keys(foodItems).length === 0 || !deliveryAddress || !startDate || isSubmitting
+                ? "bg-gray-400 cursor-not-allowed"
+                : "bg-blue-600 hover:bg-blue-700"
+            }`}
+            onClick={handleSubscribe}
+            disabled={selectedDays.length === 0 || Object.keys(foodItems).length === 0 || !deliveryAddress || !startDate || isSubmitting}
+          >
+            Subscribe Now
+          </button>
+        </div>
+
+        {/* Right Section: Order Summary */}
+        <div className="lg:col-span-1">
+          <div className="bg-gray-100 p-4 rounded-lg sticky top-4">
+            <h3 className="text-lg font-semibold text-gray-800 mb-4">Order Summary</h3>
+            <div className="space-y-3">
+              <div>
+                <p className="text-sm text-gray-600">Selected Days & Items</p>
+                <ul className="text-base font-medium text-gray-800">
+                  {selectedDays.length > 0 ? (
+                    selectedDays.map((day) => (
+                      <li key={day}>
+                        <span className="font-semibold">{day}:</span>{" "}
+                        {foodItems[day]?.length > 0
+                          ? foodItems[day].map((item) => `${item.name} (₹${item.price})`).join(", ")
+                          : "No items selected"}
+                      </li>
+                    ))
+                  ) : (
+                    <li>No days selected</li>
+                  )}
+                </ul>
+              </div>
+              <div>
+                <p className="text-sm text-gray-600">Delivery Address</p>
+                <p className="text-base font-medium text-gray-800">
+                  {deliveryAddress || "Not selected"}
+                </p>
+              </div>
+              <div>
+                <p className="text-sm text-gray-600">Delivery Time</p>
+                <p className="text-base font-medium text-gray-800">
+                  {deliveryTime || "Not selected"}
+                </p>
+              </div>
+              <div>
+                <p className="text-sm text-gray-600">Start Date</p>
+                <p className="text-base font-medium text-gray-800">
+                  {startDate || "Not selected"}
+                </p>
+              </div>
+              <div>
+                <p className="text-sm text-gray-600">End Date</p>
+                <p className="text-base font-medium text-gray-800">
+                  {endDate || "Not selected"}
+                </p>
+              </div>
+              <div className="border-t pt-3">
+                <p className="text-sm text-gray-600">Total Price</p>
+                <p className="text-xl font-semibold text-gray-800">₹{totalPrice}</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
   );
 };

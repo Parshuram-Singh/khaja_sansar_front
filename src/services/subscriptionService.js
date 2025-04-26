@@ -15,13 +15,18 @@ export const getAllSubscriptions = async () => {
 export const createSubscription = async (newSubscription) => {
   try {
     console.log('Sending subscription data:', newSubscription);
-    const response = await axios.post(`${API_BASE_URL}/subscribe`, newSubscription);
-    return response.data; // Return the full response data
+    const response = await axios.post(
+      `${API_BASE_URL}/subscribe`,
+      newSubscription
+    );
+    console.log('Received response:', response.data);
+    return response.data;
   } catch (error) {
-    console.error('Error creating subscription:', error.response || error.message);
-    throw error; // Let the caller handle the error
+    console.error('Error creating subscription:', error.response?.data || error.message);
+    throw error;
   }
 };
+
 
 
 

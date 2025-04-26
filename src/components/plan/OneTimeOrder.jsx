@@ -2,50 +2,30 @@ import { useState, useEffect } from "react";
 import useMenus from "../../hooks/useMenus";
 import { toast } from "react-toastify";
 
-const CorporatePlan = ({ setSelectedMenu, selectedMenu, subscribeItems }) => {
+const OneTimeOrder = ({ setSelectedMenu, selectedMenu, subscribeItems }) => {
   const { menus } = useMenus();
-  const [selectedItems, setSelectedItems] = useState([]); // [{ item: menu, quantity: Number }]
+  const [selectedItems, setSelectedItems] = useState([]);
   const [deliveryDate, setDeliveryDate] = useState(new Date().toISOString().split("T")[0]);
   const [deliveryTime, setDeliveryTime] = useState("");
   const [deliveryAddress, setDeliveryAddress] = useState("");
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false); // Prevent multiple submissions
 
-  // Calculate total price based on item quantities
-  const totalPrice = selectedItems.reduce((sum, { item, quantity }) => {
-    return sum + (item.price || 0) * (quantity || 0);
-  }, 0);
+  // Calculate total price of selected items
+  const totalPrice = selectedItems.reduce((sum, item) => sum + (item.price || 0), 0);
 
-  // Handle item selection and quantity changes
-  const handleItemToggle = (menu) => {
+  // Handle item selection/deselection
+  const handleItemToggle = (item) => {
     setSelectedItems((prev) => {
-      if (prev.some((entry) => entry.item.name === menu.name)) {
-        return prev.filter((entry) => entry.item.name !== menu.name);
+      if (prev.some((selected) => selected.name === item.name)) {
+        return prev.filter((selected) => selected.name !== item.name);
       } else {
-        return [...prev, { item: menu, quantity: 1 }];
+        return [...prev, item];
       }
     });
   };
 
-  const handleQuantityChange = (itemName, quantity) => {
-    const parsedQuantity = Math.max(0, parseInt(quantity) || 0);
-    setSelectedItems((prev) =>
-      prev.map((entry) =>
-        entry.item.name === itemName ? { ...entry, quantity: parsedQuantity } : entry
-      )
-    );
-  };
-
-  // Update selectedMenu state
+  // Update selectedMenu state when local state changes
   useEffect(() => {
-    const orderDetails = deliveryDate && selectedItems.length > 0
-      ? [{
-          day: deliveryDate,
-          items: selectedItems.flatMap(({ item, quantity }) =>
-            Array(quantity).fill(item.name)
-          ),
-        }]
-      : [];
-
     setSelectedMenu({
       ...selectedMenu,
       price: totalPrice,
@@ -53,15 +33,17 @@ const CorporatePlan = ({ setSelectedMenu, selectedMenu, subscribeItems }) => {
       deliveryAddress,
       startDate: deliveryDate,
       endDate: deliveryDate,
-      orderDetails,
-      type: "corporate",
+      orderDetails: deliveryDate && selectedItems.length > 0 
+        ? [{ day: deliveryDate, items: selectedItems.map((item) => item.name) }]
+        : [],
+      type: "one-time-order",
     });
   }, [selectedItems, deliveryDate, deliveryTime, deliveryAddress, setSelectedMenu, totalPrice]);
 
   const handleSubscribe = () => {
-    if (isSubmitting) return;
-    if (selectedItems.length === 0 || selectedItems.every(({ quantity }) => quantity === 0)) {
-      toast.warning("Please select at least one item with a quantity greater than 0.");
+    if (isSubmitting) return; // Prevent multiple submissions
+    if (selectedItems.length === 0) {
+      toast.warning("Please select at least one food item.");
       return;
     }
     if (!deliveryTime) {
@@ -77,9 +59,10 @@ const CorporatePlan = ({ setSelectedMenu, selectedMenu, subscribeItems }) => {
     subscribeItems();
   };
 
-  // Reset isSubmitting
+  // Reset isSubmitting after subscription attempt (success or failure)
   useEffect(() => {
     if (isSubmitting) {
+      // Reset after a delay to allow SubscriptionPage to handle the API call
       const timer = setTimeout(() => setIsSubmitting(false), 1000);
       return () => clearTimeout(timer);
     }
@@ -87,8 +70,8 @@ const CorporatePlan = ({ setSelectedMenu, selectedMenu, subscribeItems }) => {
 
   return (
     <div className="bg-white rounded-xl shadow-md p-6 mb-8">
-      <h2 className="text-2xl font-bold text-gray-800 mb-4">Corporate Plan</h2>
-      <p className="text-gray-600 mb-6">Perfect for bulk orders for events or programs</p>
+      <h2 className="text-2xl font-bold text-gray-800 mb-4">One-Time Order</h2>
+      <p className="text-gray-600 mb-6">Perfect for individuals who need a one-time meal</p>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Left Section: Form */}
@@ -98,27 +81,15 @@ const CorporatePlan = ({ setSelectedMenu, selectedMenu, subscribeItems }) => {
             <h3 className="text-lg font-semibold text-gray-800 mb-3">Select Food Items</h3>
             <div className="space-y-2 max-h-64 overflow-y-auto border border-gray-300 rounded-md p-3">
               {menus.map((menu) => (
-                <div key={menu.name} className="flex items-center space-x-2">
-                  <label className="flex items-center space-x-2 cursor-pointer flex-1">
-                    <input
-                      type="checkbox"
-                      className="h-5 w-5 text-blue-600 rounded focus:ring-blue-500"
-                      checked={selectedItems.some((entry) => entry.item.name === menu.name)}
-                      onChange={() => handleItemToggle(menu)}
-                    />
-                    <span className="text-gray-700">{menu.name} (₹{menu.price})</span>
-                  </label>
-                  {selectedItems.some((entry) => entry.item.name === menu.name) && (
-                    <input
-                      type="number"
-                      min="0"
-                      className="w-20 p-1 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
-                      value={selectedItems.find((entry) => entry.item.name === menu.name).quantity}
-                      onChange={(e) => handleQuantityChange(menu.name, e.target.value)}
-                      placeholder="Qty"
-                    />
-                  )}
-                </div>
+                <label key={menu.name} className="flex items-center space-x-2 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    className="h-5 w-5 text-blue-600 rounded focus:ring-blue-500"
+                    checked={selectedItems.some((item) => item.name === menu.name)}
+                    onChange={() => handleItemToggle(menu)}
+                  />
+                  <span className="text-gray-700">{menu.name} (₹{menu.price})</span>
+                </label>
               ))}
               {menus.length === 0 && (
                 <p className="text-gray-500">No menu items available</p>
@@ -165,22 +136,12 @@ const CorporatePlan = ({ setSelectedMenu, selectedMenu, subscribeItems }) => {
           {/* Order Button */}
           <button
             className={`w-full py-3 px-4 rounded-md font-medium text-white transition-colors ${
-              (selectedItems.length === 0 || selectedItems.every(({ quantity }) => quantity === 0)) ||
-              !deliveryDate ||
-              !deliveryTime ||
-              !deliveryAddress ||
-              isSubmitting
+              selectedItems.length === 0 || !deliveryDate || !deliveryTime || !deliveryAddress || isSubmitting
                 ? "bg-gray-400 cursor-not-allowed"
                 : "bg-blue-600 hover:bg-blue-700"
             }`}
             onClick={handleSubscribe}
-            disabled={
-              (selectedItems.length === 0 || selectedItems.every(({ quantity }) => quantity === 0)) ||
-              !deliveryDate ||
-              !deliveryTime ||
-              !deliveryAddress ||
-              isSubmitting
-            }
+            disabled={selectedItems.length === 0 || !deliveryDate || !deliveryTime || !deliveryAddress || isSubmitting}
           >
             Order Now
           </button>
@@ -194,14 +155,12 @@ const CorporatePlan = ({ setSelectedMenu, selectedMenu, subscribeItems }) => {
               <div>
                 <p className="text-sm text-gray-600">Selected Items</p>
                 <ul className="text-base font-medium text-gray-800">
-                  {selectedItems.length > 0 && selectedItems.some(({ quantity }) => quantity > 0) ? (
-                    selectedItems
-                      .filter(({ quantity }) => quantity > 0)
-                      .map(({ item, quantity }) => (
-                        <li key={item.name}>
-                          {item.name} (₹{item.price} × {quantity} = ₹{item.price * quantity})
-                        </li>
-                      ))
+                  {selectedItems.length > 0 ? (
+                    selectedItems.map((item) => (
+                      <li key={item.name}>
+                        {item.name} (₹{item.price})
+                      </li>
+                    ))
                   ) : (
                     <li>No items selected</li>
                   )}
@@ -237,4 +196,4 @@ const CorporatePlan = ({ setSelectedMenu, selectedMenu, subscribeItems }) => {
   );
 };
 
-export default CorporatePlan;
+export default OneTimeOrder;
